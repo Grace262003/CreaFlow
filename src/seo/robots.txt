@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /suivi
+Disallow: /paiement/
+Disallow: /api/
+
+Sitemap: https://www.creaflow.bj/sitemap.xml
