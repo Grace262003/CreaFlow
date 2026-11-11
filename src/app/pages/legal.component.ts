@@ -9,7 +9,7 @@ import { seo } from '../core/seo';
     <p>Les paiements Mobile Money sont traités par le prestataire de paiement : Creaflow ne conserve aucun numéro de compte ni code secret.</p>
     <p>Vos données ne sont pas vendues. Pour les consulter, les corriger ou les supprimer, écrivez à creaflow229&#64;gmail.com.</p> }
   @else { <h1>Mentions légales</h1>
-    <p><strong>Éditeur :</strong> [RAISON SOCIALE / NOM DE L’ENTREPRISE]<br>Adresse : Calavi-Agualand, Bénin<br>IFU : [À COMPLÉTER] · RCCM : [À COMPLÉTER]<br>Contact : creaflow229&#64;gmail.com · +229 01 97 16 80 15</p>
+    <p><strong>Éditeur :</strong> [RAISON SOCIALE / CreaFlow]<br>Adresse : Calavi-Agualand, Bénin<br>IFU : [À COMPLÉTER] · RCCM : [À COMPLÉTER]<br>Contact : creaflow229&#64;gmail.com · +229 01 97 16 80 15</p>
     <p><strong>Directeur de la publication :</strong> [NOM À COMPLÉTER]</p>
     <p><strong>Hébergeur :</strong> [NOM ET ADRESSE DE L’HÉBERGEUR À COMPLÉTER]</p>
     <p><strong>Propriété intellectuelle :</strong> les contenus du site (textes, visuels, logo) appartiennent à Creaflow. Les fichiers envoyés par les clients restent leur propriété.</p> }

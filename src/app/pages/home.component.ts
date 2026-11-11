@@ -13,7 +13,7 @@ import { seo } from '../core/seo';
   template: `
   <section class="hero"><div class="wrap hg">
     <div>
-      @for (x of [words[w]]; track x) {<span class="chip p sw">Calavi-Agualand · {{x}}</span>}
+      @for (x of [words[w]]; track x) {<span class="chip p sw">CreaFlow · {{x}}</span>}
       <h1 style="margin-top:1rem">L’idée devient création. La création devient impact.</h1>
       <p class="lead">Impression, démarches, logos, flyers, tee-shirts : un seul atelier pour concevoir, imprimer et livrer. Commandez en ligne, payez par Mobile Money, suivez chaque étape.</p>
       <a routerLink="/commander" class="btn">Commander maintenant</a>
@@ -83,8 +83,17 @@ import { seo } from '../core/seo';
     <div class="qa">@for (q of faq; track q[0]; let i = $index) {<details class="card" reveal [style.--d]="i*.08+'s'"><summary>{{q[0]}}</summary><p>{{q[1]}}</p></details>}</div>
     <p style="margin-top:1rem"><a routerLink="/faq" style="color:var(--red);font-weight:600">Toutes les questions →</a></p></div></section>
 
-  <section style="padding-top:0"><div class="wrap cta" reveal><div><h2 style="color:#fff">Un projet ? Lançons-le cette semaine.</h2><p>Décrivez votre besoin, nous revenons vers vous avec un prix.</p></div>
-    <div><a routerLink="/commander" class="btn" style="background:#fff;color:var(--red);box-shadow:none">Commander</a> <a class="btn ghost" [href]="'https://wa.me/'+wa" target="_blank" rel="noopener">WhatsApp</a></div></div></section>`,
+  <section style="padding-top:0">
+    <div class="wrap cta" reveal><div>
+      <h2 style="color:#fff">Un projet ? Lançons-le cette semaine.</h2>
+      <p>Décrivez votre besoin, nous revenons vers vous avec un prix.</p>
+    </div>
+    <div>
+      <a routerLink="/commander" class="btn" style="background:#fff;color:var(--red);box-shadow:none">Commander</a> 
+      <a class="btn ghost" [href]="'https://wa.me/'+wa" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+    </div>
+  </section>`,
   styles: [`
   .sw{animation:up .5s both}
   .hero{position:relative;overflow:hidden;padding:5rem 0 4rem;background:radial-gradient(60% 50% at 85% 10%,#f26a2128,transparent),radial-gradient(50% 50% at 5% 0,#d81e3e1f,transparent),linear-gradient(#0b1b3a0a 1px,transparent 1px) 0 0/100% 48px}
@@ -119,12 +128,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     { i: 'users', t: 'Particuliers et étudiants', d: 'Documents, CV, démarches et photos : on s’occupe du papier pour que vous gardiez du temps.', items: ['CV', 'Impression', 'Reliure', 'Photo d’identité', 'Démarches'] },
     { i: 'building', t: 'Entreprises et commerces', d: 'Une image soignée : logo, cartes de visite, flyers, bâches et tenues de vos équipes.', items: ['Logo', 'Cartes de visite', 'Flyers', 'Bâches', 'Tee-shirts'] },
     { i: 'heart', t: 'Églises, associations et événements', d: 'Tee-shirts, banderoles, badges, faire-part et cartes d’invitation pour vos grands rendez-vous.', items: ['Banderoles', 'Badges', 'Faire-part', 'Invitations', 'Casquettes'] }];
-  steps = [{ i: 'pointer', t: 'Commande', d: 'Choisissez le service : le formulaire s’adapte et vous envoyez vos fichiers.' }, { i: 'pencil', t: 'Conception', d: 'Mise en page et création si besoin, validées avec vous.' }, { i: 'printer', t: 'Impression', d: 'Production avec suivi de l’avancement en ligne.' }, { i: 'truck', t: 'Livraison', d: 'Retrait à Calavi-Agualand ou livraison, reçu PDF à l’appui.' }];
+  steps = [{ i: 'pointer', t: 'Commande', d: 'Choisissez le service : le formulaire s’adapte et vous envoyez vos fichiers.' }, { i: 'pencil', t: 'Conception', d: 'Mise en page et création si besoin, validées avec vous.' }, { i: 'printer', t: 'Impression', d: 'Production avec suivi de l’avancement en ligne.' }, { i: 'truck', t: 'Livraison', d: 'Retrait à cabinet ou livraison, reçu PDF à l’appui.' }];
   why = [{ i: 'layers', t: 'Tout sous le même toit', d: 'Impression, démarches, graphisme et sérigraphie : un seul interlocuteur pour tout.' }, { i: 'pointer', t: 'Commande sur mesure', d: 'Chaque service a son propre formulaire : vous ne répondez qu’aux questions utiles.' },
     { i: 'card', t: 'Paiement simple', d: 'Réglez par Mobile Money en ligne, ou à la remise de votre commande.' }, { i: 'search', t: 'Suivi de A à Z', d: 'Avec votre numéro de commande, vous voyez l’avancement à tout moment.' },
     { i: 'file', t: 'Reçus clairs', d: 'Chaque paiement donne un reçu PDF numéroté, envoyé par e-mail.' }, { i: 'phone', t: 'Joignable facilement', d: 'WhatsApp, téléphone ou e-mail : nous répondons à vos questions.' }];
   faq = [['Dois-je créer un compte ?', 'Non. Vous commandez avec votre nom et votre téléphone, puis vous suivez la commande avec son numéro.'], ['Comment payer ?', 'Par Mobile Money en ligne pour les services au prix affiché, ou à la remise de la commande.'], ['Et si je n’ai pas de visuel ?', 'Choisissez « Je veux que Creaflow le crée » : nous concevons votre flyer, logo ou affiche.']];
-  constructor() { seo('Creaflow | Impression, graphisme et sérigraphie à Calavi-Agualand', 'Photocopie, impression, démarches, logos, flyers, tee-shirts. Commandez en ligne à Calavi-Agualand, payez par Mobile Money et suivez votre commande.', { path: '/', graph: [{ '@type': 'WebSite', name: 'Creaflow', url: environment.siteUrl + '/' }, { '@type': 'Organization', name: 'Creaflow', url: environment.siteUrl + '/', logo: environment.siteUrl + '/assets/logo-512.png', email: environment.email, telephone: environment.phone }] }); }
+  constructor() { seo('Creaflow | Impression, graphisme et sérigraphie à CreaFlow', 'Photocopie, impression, démarches, logos, flyers, tee-shirts. Commandez en ligne à CreaFlow, payez par Mobile Money et suivez votre commande.', { path: '/', graph: [{ '@type': 'WebSite', name: 'Creaflow', url: environment.siteUrl + '/' }, { '@type': 'Organization', name: 'Creaflow', url: environment.siteUrl + '/', logo: environment.siteUrl + '/assets/logo-512.png', email: environment.email, telephone: environment.phone }] }); }
   async ngOnInit() { this.cat = await this.api.catalog(); this.gal = (await this.api.gallery()).slice(0, 4); }
   ngOnDestroy() { if (this.t) clearInterval(this.t); }
   byPole = (id: string) => this.cat.filter(s => s.pole === id);
