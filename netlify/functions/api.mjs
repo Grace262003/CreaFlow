@@ -1,12 +1,22 @@
 import { neon } from '@neondatabase/serverless';
 import { getStore } from '@netlify/blobs';
-import { randomUUID } from 'node:crypto';
-import { sign, verify, same } from './lib/auth.mjs';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { sign, verify, same, hashPassword, checkPassword } from './lib/auth.mjs';
 import { receiptPdf } from './lib/pdf.mjs';
 
 export const config = { path: '/api/*' };
 const env = (k) => process.env[k] || '';
-const q = (text, params = []) => neon(env('DATABASE_URL')).query(text, params);
+const q = (text, params = []) => neon(env('DATABASE_URL') || env('NETLIFY_DATABASE_URL')).query(text, params);
+let SECRET = '';
+/** Clé de signature des sessions admin : variable JWT_SECRET si elle existe, sinon clé générée et gardée dans la base. */
+const secret = async () => {
+  if (env('JWT_SECRET')) return env('JWT_SECRET');
+  if (SECRET) return SECRET;
+  const r = await q(`insert into settings(key,value) values('jwt_secret',$1) on conflict (key) do nothing returning value`, [randomBytes(32).toString('hex')]);
+  SECRET = r[0]?.value || (await q(`select value from settings where key='jwt_secret'`))[0].value; return SECRET;
+};
+const envAdmin = () => !!(env('ADMIN_EMAIL') && env('ADMIN_PASSWORD'));
+const okMail = (v) => /^\S+@\S+\.\S+$/.test(v);
 const J = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 const bad = (m, s = 400) => J({ error: m }, s);
 const S = (v, max = 500) => String(v ?? '').trim().slice(0, max);
@@ -20,7 +30,6 @@ const D = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : null);
 const TZ = `'Africa/Porto-Novo'`;
 const STATUTS = ['reçue', 'en cours', 'en production', 'prête', 'livrée', 'annulée'];
 const SOURCES = ['site', 'boutique', 'WhatsApp', 'téléphone', 'autre'];
-const actor = () => env('ADMIN_EMAIL') || 'admin';
 const log = (who, action, entity, id, detail) => q('insert into audit_log(actor,action,entity,entity_id,detail) values($1,$2,$3,$4,$5)', [who, action, entity, String(id ?? ''), S(detail, 1000)]).catch(() => {});
 const recalc = async (id) => (await q(`update orders set paid=coalesce((select sum(amount) from payments where order_id=$1 and not voided),0) where id=$1 returning *`, [id]))[0];
 const getPays = (id) => q('select * from payments where order_id=$1 and not voided order by paid_at, created_at', [id]);
@@ -39,7 +48,7 @@ async function mail(to, subject, html, attachments) {
   } catch { return false; }
 }
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const notify = () => env('NOTIFY_EMAIL') || env('ADMIN_EMAIL');
+const notifyTo = async () => env('NOTIFY_EMAIL') || env('ADMIN_EMAIL') || (await q('select email from admin_users order by created_at limit 1').catch(() => []))[0]?.email || '';
 
 async function sendReceipt(o, opts = {}) {
   const pays = (await getPays(o.id)).map(fix);
@@ -54,13 +63,14 @@ export default async (req) => {
   const url = new URL(req.url); const m = req.method;
   const path = url.pathname.replace(/^\/(\.netlify\/functions\/api|api)\/?/, '').split('/').filter(Boolean);
   const [a, b, c, d] = path;
-  const isAdmin = () => !!verify((req.headers.get('authorization') || '').replace(/^Bearer /, '') || url.searchParams.get('t') || '', env('JWT_SECRET'));
+  let ME = 'admin'; const actor = () => ME;
+  const adminOf = async () => verify((req.headers.get('authorization') || '').replace(/^Bearer /, '') || url.searchParams.get('t') || '', await secret());
   try {
     // ---------- public ----------
     if (m === 'GET' && a === 'catalog') return J((await q('select id,pole,name,hint,price,unit,active,sort,form from services where active order by sort,name')).map(fix));
     if (m === 'GET' && a === 'gallery') return J(await q('select id,title,category,path from gallery order by created_at desc'));
     if (m === 'GET' && a === 'file' && b && c) {
-      if (b === 'orders' && !isAdmin()) return bad('non autorisé', 401);
+      if (b === 'orders' && !(await adminOf())) return bad('non autorisé', 401);
       if (b !== 'gallery' && b !== 'orders') return bad('introuvable', 404);
       const r = await getStore(b === 'gallery' ? 'gallery' : 'order-files').getWithMetadata(decodeURIComponent(c), { type: 'arrayBuffer' });
       if (!r) return bad('introuvable', 404);
@@ -91,7 +101,7 @@ export default async (req) => {
         values('CF-'||to_char(now(),'YYYY')||'-'||lpad(nextval('order_seq')::text,4,'0'),$1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12::jsonb) returning id,code,total`,
         [s.id, s.name, details, qty, name, phone, key8(phone), email || null, delivery, JSON.stringify(files), total, JSON.stringify(opts(d.options))]);
       await log('client', 'création', 'order', o.id, `Commande en ligne ${o.code} : ${s.name} × ${qty}`);
-      await mail(notify(), `Nouvelle commande ${o.code}`, `<p><b>${esc(s.name)}</b> × ${qty}</p><p>${esc(name)} · ${esc(phone)}</p>${oList.map((x) => `<p><b>${esc(x.label)}</b> : ${esc(x.value)}</p>`).join('')}<p>${esc(details)}</p>`);
+      await mail(await notifyTo(), `Nouvelle commande ${o.code}`, `<p><b>${esc(s.name)}</b> × ${qty}</p><p>${esc(name)} · ${esc(phone)}</p>${oList.map((x) => `<p><b>${esc(x.label)}</b> : ${esc(x.value)}</p>`).join('')}<p>${esc(details)}</p>`);
       return J({ code: o.code, total: o.total == null ? null : Number(o.total) });
     }
     if (m === 'POST' && a === 'track') {
@@ -135,23 +145,55 @@ export default async (req) => {
       if (!name || message.length < 5 || (!phone && !email)) return bad('Champs invalides.');
       if (email && !/^\S+@\S+\.\S+$/.test(email)) return bad('E-mail invalide.');
       await q('insert into messages(name,phone,email,message) values($1,$2,$3,$4)', [name, phone, email, message]);
-      await mail(notify(), `Message de ${name}`, `<p>${esc(message)}</p><p>${esc(name)} · ${esc(phone)} · ${esc(email)}</p>`);
+      await mail(await notifyTo(), `Message de ${name}`, `<p>${esc(message)}</p><p>${esc(name)} · ${esc(phone)} · ${esc(email)}</p>`);
       return J({ ok: true });
     }
     // ---------- admin ----------
-    if (m === 'POST' && a === 'admin' && b === 'login') {
-      if (!env('ADMIN_EMAIL') || !env('ADMIN_PASSWORD') || !env('JWT_SECRET')) return bad('Accès admin non configuré.', 503);
+    if (m === 'GET' && a === 'admin' && b === 'status') {
+      const [{ n }] = await q('select count(*)::int n from admin_users'); const code = await q(`select 1 from settings where key='setup_code'`);
+      return J({ configured: n > 0 || envAdmin(), canSetup: n === 0 && !envAdmin() && code.length > 0 });
+    }
+    if (m === 'POST' && a === 'admin' && b === 'setup') {
       const d = await req.json().catch(() => ({}));
-      const okE = same(S(d.email, 200).toLowerCase(), env('ADMIN_EMAIL').toLowerCase()), okP = same(String(d.password ?? ''), env('ADMIN_PASSWORD'));
-      if (!(okE && okP)) { await new Promise((r) => setTimeout(r, 500)); return bad('Identifiants incorrects.', 401); }
-      return J({ token: sign({ role: 'admin' }, env('JWT_SECRET')) });
+      const [{ n }] = await q('select count(*)::int n from admin_users');
+      if (n > 0 || envAdmin()) return bad('Le compte administrateur existe déjà.', 409);
+      const [c] = await q(`select value from settings where key='setup_code'`);
+      if (!c) return bad('Code d’installation introuvable : exécutez database/schema.sql dans Neon.', 503);
+      if (!same(S(d.code, 100), c.value)) { await new Promise((r) => setTimeout(r, 600)); return bad('Code d’installation incorrect.', 401); }
+      const email = S(d.email, 200).toLowerCase(), pw = String(d.password ?? '');
+      if (!okMail(email)) return bad('Adresse e-mail invalide.');
+      if (pw.length < 10) return bad('Le mot de passe doit contenir au moins 10 caractères.');
+      await q('insert into admin_users(email,password_hash) values($1,$2)', [email, hashPassword(pw)]);
+      await q(`delete from settings where key='setup_code'`);
+      await log(email, 'compte admin', 'admin', email, 'Compte administrateur créé');
+      return J({ token: sign({ role: 'admin', sub: email }, await secret()) });
+    }
+    if (m === 'POST' && a === 'admin' && b === 'login') {
+      const d = await req.json().catch(() => ({}));
+      const email = S(d.email, 200).toLowerCase(), pw = String(d.password ?? '');
+      const [u] = await q('select * from admin_users where lower(email)=$1', [email]);
+      const [{ n }] = await q('select count(*)::int n from admin_users');
+      if (!n && !envAdmin()) return bad('Aucun compte administrateur : créez-le d’abord.', 503);
+      const ok = u ? checkPassword(pw, u.password_hash) : envAdmin() && same(email, env('ADMIN_EMAIL').toLowerCase()) && same(pw, env('ADMIN_PASSWORD'));
+      if (!ok) { await new Promise((r) => setTimeout(r, 500)); return bad('Identifiants incorrects.', 401); }
+      return J({ token: sign({ role: 'admin', sub: email }, await secret()) });
     }
     if (a === 'admin') {
-      if (!isAdmin()) return bad('non autorisé', 401);
+      const me = await adminOf(); if (!me) return bad('non autorisé', 401);
+      ME = me.sub || env('ADMIN_EMAIL') || 'admin';
       const body = ['POST', 'PUT', 'PATCH'].includes(m) && !(a === 'admin' && b === 'gallery' && m === 'POST') ? await req.json().catch(() => ({})) : {};
       const who = actor();
       const range = () => { const t = new Date().toISOString().slice(0, 10); let from = D(url.searchParams.get('from')) || t.slice(0, 8) + '01', to = D(url.searchParams.get('to')) || t; if (from > to) [from, to] = [to, from]; return [from, to]; };
       const inP = (col) => `(${col} at time zone ${TZ})::date between $1::date and $2::date`;
+      if (m === 'POST' && b === 'password') {
+        const [u] = await q('select * from admin_users where lower(email)=$1', [ME.toLowerCase()]);
+        if (!u) return bad('Ce compte est géré par les variables Netlify : modifiez ADMIN_PASSWORD là-bas.');
+        if (!checkPassword(String(body.current ?? ''), u.password_hash)) return bad('Mot de passe actuel incorrect.', 401);
+        if (String(body.next ?? '').length < 10) return bad('Le nouveau mot de passe doit contenir au moins 10 caractères.');
+        await q('update admin_users set password_hash=$2 where id=$1', [u.id, hashPassword(String(body.next))]);
+        await log(who, 'compte admin', 'admin', u.email, 'Mot de passe modifié');
+        return J({ ok: true });
+      }
       // ----- commandes -----
       if (m === 'GET' && b === 'orders' && !c) return J((await q('select * from orders order by created_at desc limit 1000')).map(fix));
       if (m === 'GET' && b === 'orders' && UUID.test(c || '')) {

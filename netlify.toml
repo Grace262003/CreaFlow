@@ -24,3 +24,9 @@
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+
+[dev]
+  command = "npx ng serve --port 4200"
+  targetPort = 4200
+  port = 4200
+  autoLaunch = true

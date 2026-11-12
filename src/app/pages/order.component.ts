@@ -28,7 +28,7 @@ interface UFile { name: string; key?: string; busy: boolean; error?: string; }
             <label [attr.for]="'f-' + fl.key">{{fl.label}}@if (fl.required) {<span class="req"> *</span>}</label>
             @switch (fl.type) {
               @case ('choice') { <div class="segs">@for (o of fl.options; track o) {<button type="button" class="seg" [class.sel]="ans[fl.key]===o" (click)="ans[fl.key]=o">{{o}}</button>}</div> }
-              @case ('select') { <select [id]="'f-' + fl.key" [name]="'f-' + fl.key" [(ngModel)]="ans[fl.key]"><option value="">Choisir…</option>@for (o of fl.options; track o) {<option>{{o}}</option>}</select> }
+              @case ('select') { <select [id]="'f-' + fl.key" [name]="'f-' + fl.key" [ngModel]="ans[fl.key] || ''" (ngModelChange)="ans[fl.key] = $event"><option value="">Choisir…</option>@for (o of fl.options; track o) {<option>{{o}}</option>}</select> }
               @case ('textarea') { <textarea [id]="'f-' + fl.key" [name]="'f-' + fl.key" rows="3" [(ngModel)]="ans[fl.key]" [placeholder]="fl.placeholder ?? ''"></textarea> }
               @case ('number') { <input [id]="'f-' + fl.key" [name]="'f-' + fl.key" type="number" min="0" [(ngModel)]="ans[fl.key]" [placeholder]="fl.placeholder ?? ''"> }
               @default { <input [id]="'f-' + fl.key" [name]="'f-' + fl.key" type="text" [(ngModel)]="ans[fl.key]" [placeholder]="fl.placeholder ?? ''"> }
@@ -69,6 +69,7 @@ interface UFile { name: string; key?: string; busy: boolean; error?: string; }
             <button type="button" class="opt" [class.sel]="pm==='place'" (click)="pm='place'"><b>À la remise</b><small>en espèces ou Mobile Money sur place</small></button></div>
         </div> }
         @if (err) {<p class="err">{{err}}</p>}
+        <div class="mtot"><small>Total estimé</small><b>{{ total() ? f(total()) : 'Sur devis' }}</b></div>
         <div class="nav">
           @if (step>1) {<button type="button" class="btn ghost" (click)="prev()">Précédent</button>} @else {<span></span>}
           <button class="btn" [disabled]="busy">{{ step<3 ? 'Continuer' : busy ? 'Envoi en cours…' : (pm==='ligne' && total() ? 'Commander et payer' : 'Envoyer ma commande') }}</button>
@@ -99,7 +100,9 @@ interface UFile { name: string; key?: string; busy: boolean; error?: string; }
   .top{padding-top:3.5rem}.lead{font-size:1.1rem}.pane{animation:up .5s both}
   .steps{display:flex;gap:.6rem;list-style:none;padding:0;margin:1.5rem 0;flex-wrap:wrap}.steps li{display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border-radius:99px;background:#fff;border:1.5px solid var(--line);font-weight:600;color:var(--mut);transition:all .3s}
   .steps b{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#eef2fa;font-size:.85rem}.steps li.on{border-color:var(--red);color:var(--navy)}.steps li.on b{background:var(--g);color:#fff}.steps li.ok b{background:#1fa855;color:#fff}
-  .lay{display:grid;gap:1.5rem;grid-template-columns:1fr 310px;align-items:start}@media(max-width:900px){.lay{grid-template-columns:1fr}.sum{order:-1}}
+  .lay{display:grid;gap:1.5rem;grid-template-columns:1fr 310px;align-items:start}@media(max-width:900px){.lay{grid-template-columns:1fr}.sum{position:static}}
+  .mtot{display:none}@media(max-width:900px){.mtot{display:flex;justify-content:space-between;align-items:baseline;margin-top:1.2rem;padding:.8rem 1rem;border-radius:14px;background:#fff7f1;border:1px solid #f26a2133}.mtot b{font-size:1.3rem;color:var(--navy)}}
+  @media(max-width:600px){.steps{gap:.4rem}.steps li{padding:.4rem .7rem}.steps li:not(.on) span{display:none}.nav .btn{padding:.8rem 1.2rem}.tiles{grid-template-columns:1fr}.code{font-size:1.7rem}}
   .main h3{margin:1.2rem 0 .6rem;font-size:1.05rem}.tiles{display:grid;gap:.6rem;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
   .tile,.opt,.seg{display:flex;flex-direction:column;gap:.15rem;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:.8rem 1rem;font:inherit;color:var(--navy);cursor:pointer;transition:all .25s}
   .tile:hover,.opt:hover:not(:disabled),.seg:hover{transform:translateY(-3px);border-color:#f26a2188}.tile.sel,.opt.sel,.seg.sel{border-color:var(--red);box-shadow:0 0 0 3px #d81e3e22;background:#fff7f8}.opt:disabled{opacity:.5;cursor:not-allowed}

@@ -46,7 +46,7 @@ import { seo, serviceLd } from '../core/seo';
   styles: [`
   .head{padding:4rem 0 1.5rem}.head h1{max-width:18ch}.lead{font-size:1.15rem;max-width:56ch;margin:1rem 0 2rem}
   .tools{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;justify-content:space-between}
-  .tabs{display:flex;gap:.5rem;flex-wrap:wrap}.tab{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:.55rem 1.1rem;font:600 .95rem 'Plus Jakarta Sans';color:var(--navy);cursor:pointer;transition:all .25s}
+  .tabs{display:flex;gap:.5rem;flex-wrap:wrap}.tab{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:.55rem 1.1rem;font:600 .95rem 'Plus Jakarta Sans',system-ui,sans-serif;color:var(--navy);cursor:pointer;transition:all .25s}
   .tab b{margin-left:.4rem;font-size:.8rem;opacity:.6}.tab:hover{transform:translateY(-2px)}.tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
   .search{max-width:340px;border-radius:99px;padding:.7rem 1.2rem}
   .list{padding-top:2rem}.pole{display:flex;gap:1.1rem;align-items:center;margin:3rem 0 1.2rem;padding:1.3rem 1.5rem;border-radius:var(--r);background:#fff;border:1px solid var(--line);border-left:6px solid var(--red)}

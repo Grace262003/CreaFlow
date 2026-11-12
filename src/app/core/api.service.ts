@@ -15,7 +15,9 @@ export class ApiService {
     try {
       const r = await fetch(url, { method, headers, body: payload });
       if (auth && r.status === 401) { this.logout(); this.onExpire?.(); }
-      return { ok: r.ok, status: r.status, data: await r.json().catch(() => null) };
+      const data = await r.json().catch(() => null);
+      if (r.ok && data === null && url.startsWith('/api/')) return { ok: false, status: 0, data: { error: 'Serveur de l’API injoignable : en local, lancez « npx netlify-cli dev » (et non « ng serve »).' } };
+      return { ok: r.ok, status: r.status, data };
     }
     catch { return { ok: false, status: 0, data: null }; }
   }
@@ -34,6 +36,13 @@ export class ApiService {
     if (r.ok) { this.token = r.data.token; try { localStorage.setItem('cf_admin', this.token); } catch {} }
     return r;
   }
+  adminStatus() { return this.req('GET', '/api/admin/status'); }
+  async setup(code: string, email: string, password: string) {
+    const r = await this.req('POST', '/api/admin/setup', { code, email, password });
+    if (r.ok) { this.token = r.data.token; try { localStorage.setItem('cf_admin', this.token); } catch {} }
+    return r;
+  }
+  changePassword(current: string, next: string) { return this.req('POST', '/api/admin/password', { current, next }, true); }
   logout() { this.token = ''; try { localStorage.removeItem('cf_admin'); } catch {} }
   hasToken() { return !!this.token; }
   orders() { return this.req('GET', '/api/admin/orders', undefined, true); }
