@@ -1,0 +1,3 @@
+# Chaîne de connexion Neon (bouton « Connect » dans le tableau de bord Neon).
+# Remplacez la ligne ci-dessous par la vôtre, sans guillemets ni espaces. Ne partagez jamais ce fichier.
+DATABASE_URL=postgresql://UTILISATEUR:MOT_DE_PASSE@ep-xxxxxx.region.aws.neon.tech/neondb?sslmode=require

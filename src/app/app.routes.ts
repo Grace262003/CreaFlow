@@ -8,6 +8,7 @@ export const routes: Routes = [
   { path: 'faq', ...l(() => import('./pages/faq.component').then(m => m.FaqComponent)) },
   { path: 'commander', ...l(() => import('./pages/order.component').then(m => m.OrderComponent)) },
   { path: 'paiement/retour', ...l(() => import('./pages/track.component').then(m => m.TrackComponent)) },
+  { path: 'mes-commandes', ...l(() => import('./pages/track.component').then(m => m.TrackComponent)) },
   { path: 'suivi', ...l(() => import('./pages/track.component').then(m => m.TrackComponent)) },
   { path: 'contact', ...l(() => import('./pages/contact.component').then(m => m.ContactComponent)) },
   { path: 'mentions-legales', ...l(() => import('./pages/legal.component').then(m => m.LegalComponent)) },

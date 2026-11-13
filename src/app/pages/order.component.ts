@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import { POLES, Service, fcfa } from '../core/data';
 import { ApiService } from '../core/api.service';
 import { Field, FORMS, FormKind, kindOf } from '../core/forms';
+import { OrdersStore } from '../core/orders-store';
 import { seo } from '../core/seo';
 interface UFile { name: string; key?: string; busy: boolean; error?: string; }
 @Component({
@@ -87,12 +88,12 @@ interface UFile { name: string; key?: string; busy: boolean; error?: string; }
     </div> }
     @else { <div class="card ok pane"><h2>Commande enregistrée ✓</h2>
       <p>Votre numéro de commande :</p><div class="code">{{done.code}}</div>
-      <p>Gardez-le avec le téléphone utilisé : c’est tout ce qu’il faut pour suivre l’avancement.</p>
+      <p>Votre commande est enregistrée dans « Mes commandes » sur cet appareil. Gardez ce numéro et votre téléphone pour la retrouver ailleurs.</p>
       @if (payErr) {<p class="err">Le paiement en ligne n’a pas démarré. Vous pouvez réessayer ou régler à la remise.</p>}
       <div class="row">
         @if (pm==='ligne' && done.total) {<button class="btn" (click)="startPay()" [disabled]="paying">{{paying ? 'Redirection…' : (payErr ? 'Réessayer le paiement' : 'Payer maintenant')}}</button>}
         <button class="btn dark" type="button" (click)="copy()">{{copied ? 'Copié ✓' : 'Copier le numéro'}}</button>
-        <a class="btn ghost" routerLink="/suivi" [queryParams]="{code: done.code}">Suivre ma commande</a>
+        <a class="btn ghost" routerLink="/mes-commandes" [queryParams]="{code: done.code}">Suivre ma commande</a>
         <a class="btn ghost" [href]="waLink()" target="_blank" rel="noopener">Écrire sur WhatsApp</a>
         <button class="btn ghost" type="button" (click)="reset()">Nouvelle commande</button></div></div> }
   </div></section>`,
@@ -119,7 +120,7 @@ interface UFile { name: string; key?: string; busy: boolean; error?: string; }
   .ok{max-width:640px}.code{font-size:2.2rem;font-weight:800;color:var(--red);letter-spacing:.04em;margin:.2rem 0 1rem}.row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem}`]
 })
 export class OrderComponent implements OnInit {
-  api = inject(ApiService); route = inject(ActivatedRoute); f = fcfa; poles = POLES;
+  api = inject(ApiService); store = inject(OrdersStore); route = inject(ActivatedRoute); f = fcfa; poles = POLES;
   labels = ['Service', 'Détails', 'Coordonnées'];
   cat: Service[] = []; step = 1; sid = ''; qty = 1; details = ''; files: UFile[] = []; ans: Record<string, string> = {}; sizes: Record<string, number> = {};
   name = ''; phone = ''; email = ''; delivery = 'retrait'; pm = 'place';
@@ -181,7 +182,7 @@ export class OrderComponent implements OnInit {
     const r = await this.api.createOrder({ service: this.sid, details: this.details, quantity: this.effQty(), options: this.options(), name: this.name, phone: this.phone, email: this.email, delivery: this.delivery, files: this.files.filter(f => f.key).map(f => f.key) });
     this.busy = false;
     if (!r.ok) { this.err = r.data?.error ?? 'Connexion impossible. Vérifiez votre réseau ou écrivez-nous sur WhatsApp.'; return; }
-    this.done = r.data;
+    this.done = r.data; this.store.save({ code: r.data.code, phone: this.phone, service: this.cur()?.name, at: Date.now() });
     if (this.pm === 'ligne' && r.data.total) this.startPay();
   }
   async startPay() {

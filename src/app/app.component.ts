@@ -15,13 +15,14 @@ import { environment } from '../environments/environment';
       <a routerLink="/a-propos" routerLinkActive="on">À propos</a>
       <a routerLink="/faq" routerLinkActive="on">FAQ</a>
       <a routerLink="/contact" routerLinkActive="on">Contact</a>
+      <a routerLink="/mes-commandes" routerLinkActive="on">Mes commandes</a>
       <a routerLink="/commander" class="btn">Commander</a>
     </nav></div></header>
   <main><router-outlet/></main>
   <footer><div class="wrap fg">
     <div><img src="assets/logo-wordmark.png" height="30" alt="Creaflow" style="width:auto;display:block;filter:brightness(0) invert(1);margin-bottom:.8rem"><p>L’idée devient création, la création devient impact.</p><p>Calavi-Agualand, Bénin<br>{{mail}}</p></div>
     <div><strong>Services</strong><a routerLink="/services">Impression</a><a routerLink="/services">Démarches et informatique</a><a routerLink="/services">Graphisme et sérigraphie</a></div>
-    <div><strong>Entreprise</strong><a routerLink="/a-propos">À propos</a><a routerLink="/realisations">Réalisations</a><a routerLink="/suivi">Suivre ma commande</a><a routerLink="/faq">FAQ</a></div>
+    <div><strong>Entreprise</strong><a routerLink="/a-propos">À propos</a><a routerLink="/realisations">Réalisations</a><a routerLink="/mes-commandes">Mes commandes</a><a routerLink="/faq">FAQ</a></div>
     <div><strong>Légal</strong><a routerLink="/mentions-legales">Mentions légales</a><a routerLink="/confidentialite">Confidentialité</a></div>
   </div><div class="wrap copy">© {{y}} Creaflow. Tous droits réservés.</div></footer>
   <a class="wa" [href]="'https://wa.me/'+wa" target="_blank" rel="noopener" aria-label="Écrire sur WhatsApp"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9 0 1 1 21 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>WhatsApp</span></a>`,

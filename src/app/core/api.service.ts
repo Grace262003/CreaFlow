@@ -23,6 +23,7 @@ export class ApiService {
   }
   async catalog(): Promise<Service[]> { const r = await this.req('GET', '/api/catalog'); return r.ok && r.data?.length ? r.data : SERVICES; }
   async gallery(): Promise<any[]> { const r = await this.req('GET', '/api/gallery'); return r.ok && Array.isArray(r.data) ? r.data : []; }
+  async galleryCategories(): Promise<{ name: string; n: number }[]> { const r = await this.req('GET', '/api/gallery-categories'); return r.ok && Array.isArray(r.data) ? r.data : []; }
   imgUrl(path: string) { return `/api/file/gallery/${encodeURIComponent(path)}`; }
   upload(file: File) { const f = new FormData(); f.append('file', file); return this.req('POST', '/api/upload', f); }
   createOrder(o: any) { return this.req('POST', '/api/orders', o); }

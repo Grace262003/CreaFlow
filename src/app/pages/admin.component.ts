@@ -4,6 +4,7 @@ import { ApiService } from '../core/api.service';
 import { ToastService } from '../core/toast.service';
 import { seo } from '../core/seo';
 import { AccountingComponent } from '../admin/accounting.component';
+import { AccountComponent } from '../admin/account.component';
 import { ContentComponent } from '../admin/content.component';
 import { DashboardComponent } from '../admin/dashboard.component';
 import { JournalComponent } from '../admin/journal.component';
@@ -11,7 +12,7 @@ import { OrdersComponent } from '../admin/orders.component';
 import { ReportsComponent } from '../admin/reports.component';
 type Tab = 'dash' | 'orders' | 'compta' | 'rapports' | 'journal' | 'contenu' | 'compte';
 @Component({
-  selector: 'app-admin', standalone: true, imports: [FormsModule, DashboardComponent, OrdersComponent, AccountingComponent, ReportsComponent, JournalComponent, ContentComponent],
+  selector: 'app-admin', standalone: true, imports: [FormsModule, DashboardComponent, OrdersComponent, AccountingComponent, ReportsComponent, JournalComponent, ContentComponent, AccountComponent],
   template: `<section><div class="wrap">
   @if (!ok) {
     @if (apiDown) { <div class="card" style="max-width:560px"><h1 style="font-size:1.8rem">Serveur injoignable</h1><p>L’espace admin a besoin du serveur du site (API et base de données), qui n’existe pas avec « ng serve ». En local, lancez <b>npx netlify-cli dev</b> puis ouvrez <b>http://localhost:8888/admin</b> (voir le README). Sinon, ouvrez le site déployé sur Netlify.</p></div> }
@@ -37,10 +38,7 @@ type Tab = 'dash' | 'orders' | 'compta' | 'rapports' | 'journal' | 'contenu' | '
       @case ('rapports') {<app-reports/>}
       @case ('journal') {<app-journal/>}
       @case ('contenu') {<app-content/>}
-      @case ('compte') {<form class="card" style="max-width:460px" (ngSubmit)="changePw()" novalidate><h3>Changer mon mot de passe</h3>
-        <label for="cp">Mot de passe actuel</label><input id="cp" name="cp" type="password" [(ngModel)]="cur" autocomplete="current-password">
-        <label for="np">Nouveau mot de passe (10 caractères minimum)</label><input id="np" name="np" type="password" [(ngModel)]="pw" autocomplete="new-password">
-        <label for="np2">Confirmer</label><input id="np2" name="np2" type="password" [(ngModel)]="pw2" autocomplete="new-password"><br><br><button class="btn">Enregistrer</button></form>}
+      @case ('compte') {<app-account/>}
     } }
   @if (toast.msg) {<div class="toast" role="status">{{toast.msg}}</div>}
   </div></section>`,
@@ -48,7 +46,7 @@ type Tab = 'dash' | 'orders' | 'compta' | 'rapports' | 'journal' | 'contenu' | '
 })
 export class AdminComponent implements OnInit {
   api = inject(ApiService); toast = inject(ToastService); tab: Tab = 'dash'; focus = '';
-  tabs: [Tab, string][] = [['dash', 'Tableau de bord'], ['orders', 'Commandes'], ['compta', 'Comptabilité'], ['rapports', 'Rapports'], ['journal', 'Journal'], ['contenu', 'Contenu du site'], ['compte', 'Mon compte']];
+  tabs: [Tab, string][] = [['dash', 'Tableau de bord'], ['orders', 'Commandes'], ['compta', 'Comptabilité'], ['rapports', 'Rapports'], ['journal', 'Journal'], ['contenu', 'Contenu du site'], ['compte', 'Mon compte et équipe']];
   ok = false; busy = false; email = ''; pw = ''; pw2 = ''; cur = ''; code = ''; err = ''; st: { configured: boolean; canSetup: boolean } | null = null; apiDown = false;
   constructor() { seo('Administration', 'Espace réservé à l’administration de Creaflow.', { path: '/admin', noindex: true }); }
   async ngOnInit() { this.ok = this.api.hasToken(); if (!this.ok) { const r = await this.api.adminStatus(); if (r.ok) this.st = r.data; else { this.apiDown = r.status === 0; this.st = { configured: true, canSetup: false }; } } this.api.onExpire = () => { this.ok = false; this.err = 'Session expirée, reconnectez-vous.'; }; }
@@ -64,10 +62,5 @@ export class AdminComponent implements OnInit {
     if (this.pw !== this.pw2) { this.err = 'Les deux mots de passe ne correspondent pas.'; return; }
     this.busy = true; const r = await this.api.setup(this.code.trim(), this.email, this.pw); this.busy = false;
     if (r.ok) { this.ok = true; this.st = { configured: true, canSetup: false }; this.pw = this.pw2 = ''; this.tab = 'dash'; this.toast.show('Compte administrateur créé. Bienvenue !'); } else this.err = r.data?.error ?? 'Création impossible.';
-  }
-  async changePw() {
-    if (this.pw !== this.pw2) { this.toast.show('Les deux mots de passe ne correspondent pas.'); return; }
-    const r = await this.api.changePassword(this.cur, this.pw);
-    if (r.ok) { this.toast.show('Mot de passe modifié.'); this.cur = this.pw = this.pw2 = ''; } else this.toast.show(r.data?.error ?? 'Modification impossible.');
   }
 }

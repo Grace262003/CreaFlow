@@ -3,6 +3,7 @@ import { getStore } from '@netlify/blobs';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { sign, verify, same, hashPassword, checkPassword } from './lib/auth.mjs';
 import { receiptPdf } from './lib/pdf.mjs';
+import { waNumber } from './lib/phone.mjs';
 
 export const config = { path: '/api/*' };
 const env = (k) => process.env[k] || '';
@@ -36,6 +37,8 @@ const getPays = (id) => q('select * from payments where order_id=$1 and not void
 const RNO = `'REC-'||to_char(now(),'YYYY')||'-'||lpad(nextval('receipt_seq')::text,4,'0')`;
 const FILE_OK = /^(image\/|application\/pdf|application\/msword|application\/vnd\.openxmlformats|text\/plain)/;
 const MAX = 4 * 1024 * 1024;
+const addCat = (name) => (name ? q('insert into gallery_categories(name,sort) select $1, coalesce(max(sort),0)+1 from gallery_categories on conflict (name) do nothing', [name]) : null);
+const isDup = (e) => e?.code === '23505' || /unique|duplicate/i.test(String(e?.message));
 const FORMS = ['print', 'binding', 'typing', 'admin', 'cv', 'photo', 'logo', 'design', 'banner', 'textile', 'goodies', 'generic'];
 const opts = (v) => (Array.isArray(v) ? v : []).slice(0, 30).map((x) => ({ label: S(x?.label, 60), value: S(x?.value, 400) })).filter((x) => x.label && x.value);
 
@@ -49,6 +52,14 @@ async function mail(to, subject, html, attachments) {
 }
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const notifyTo = async () => env('NOTIFY_EMAIL') || env('ADMIN_EMAIL') || (await q('select email from admin_users order by created_at limit 1').catch(() => []))[0]?.email || '';
+
+async function makeReceipt(o, ref) {
+  let opts = { number: o.code, title: 'RÉCAPITULATIF' };
+  if (ref) { const [p] = await q('select * from payments where ref=$1 and order_id=$2 and not voided', [String(ref).slice(0, 80), o.id]); if (!p) return null; opts = { number: p.receipt_no, amountNow: Number(p.amount), date: p.paid_at }; }
+  const pays = (await getPays(o.id)).map(fix);
+  return { opts, pdf: await receiptPdf({ ...o, total: Number(o.total), paid: Number(o.paid) }, pays, opts) };
+}
+const fm = (v) => String(Math.round(Number(v))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' FCFA';
 
 async function sendReceipt(o, opts = {}) {
   const pays = (await getPays(o.id)).map(fix);
@@ -64,10 +75,20 @@ export default async (req) => {
   const path = url.pathname.replace(/^\/(\.netlify\/functions\/api|api)\/?/, '').split('/').filter(Boolean);
   const [a, b, c, d] = path;
   let ME = 'admin'; const actor = () => ME;
-  const adminOf = async () => verify((req.headers.get('authorization') || '').replace(/^Bearer /, '') || url.searchParams.get('t') || '', await secret());
+  const adminOf = async () => {
+    const p = verify((req.headers.get('authorization') || '').replace(/^Bearer /, '') || url.searchParams.get('t') || '', await secret());
+    if (!p || p.role !== 'admin') return null;
+    const sub = String(p.sub || '').toLowerCase();
+    if ((await q('select 1 from admin_users where lower(email)=$1', [sub])).length) return p;
+    return envAdmin() && sub === env('ADMIN_EMAIL').toLowerCase() ? p : null;
+  };
+  const origin = site() || url.origin;
+  const RCPT_TTL = 180 * 86400;
+  const rcptLink = async (orderId, ref) => `/api/receipt/${sign({ k: 'rcpt', o: orderId, r: ref || null }, await secret(), RCPT_TTL)}`;
   try {
     // ---------- public ----------
     if (m === 'GET' && a === 'catalog') return J((await q('select id,pole,name,hint,price,unit,active,sort,form from services where active order by sort,name')).map(fix));
+    if (m === 'GET' && a === 'gallery-categories') return J(await q(`select c.name, count(g.id)::int n from gallery_categories c join gallery g on g.category=c.name group by c.id, c.name, c.sort order by c.sort, c.name`));
     if (m === 'GET' && a === 'gallery') return J(await q('select id,title,category,path from gallery order by created_at desc'));
     if (m === 'GET' && a === 'file' && b && c) {
       if (b === 'orders' && !(await adminOf())) return bad('non autorisé', 401);
@@ -104,10 +125,26 @@ export default async (req) => {
       await mail(await notifyTo(), `Nouvelle commande ${o.code}`, `<p><b>${esc(s.name)}</b> × ${qty}</p><p>${esc(name)} · ${esc(phone)}</p>${oList.map((x) => `<p><b>${esc(x.label)}</b> : ${esc(x.value)}</p>`).join('')}<p>${esc(details)}</p>`);
       return J({ code: o.code, total: o.total == null ? null : Number(o.total) });
     }
+    const trackOne = async (code, phone) => {
+      const [o] = await q('select id,service,status,total,paid,created_at from orders where code=$1 and phone_key=$2', [S(code, 30).toUpperCase(), key8(phone ?? '')]);
+      if (!o) return null;
+      const { id, ...rest } = fix(o);
+      return { ...rest, receipt: rest.total != null && rest.paid > 0 ? await rcptLink(id, null) : null };
+    };
     if (m === 'POST' && a === 'track') {
-      const d = await req.json().catch(() => ({}));
-      const [o] = await q('select service,status,total,paid,created_at from orders where code=$1 and phone_key=$2', [S(d.code, 30).toUpperCase(), key8(d.phone ?? '')]);
-      return o ? J(fix(o)) : bad('introuvable', 404);
+      const d = await req.json().catch(() => ({})); const r = await trackOne(d.code, d.phone);
+      return r ? J(r) : bad('introuvable', 404);
+    }
+    if (m === 'POST' && a === 'track-many') {
+      const d = await req.json().catch(() => ({})); const items = (Array.isArray(d.items) ? d.items : []).slice(0, 20);
+      return J(await Promise.all(items.map(async (it) => { const code = S(it?.code, 30).toUpperCase(); const r = await trackOne(code, it?.phone); return r ? { code, ...r } : { code, notFound: true }; })));
+    }
+    if (m === 'GET' && a === 'receipt' && b) {
+      const p = verify(decodeURIComponent(b), await secret());
+      if (!p || p.k !== 'rcpt' || !UUID.test(p.o || '')) return bad('Lien invalide ou expiré.', 404);
+      const [o] = await q('select * from orders where id=$1', [p.o]); if (!o || o.total == null) return bad('introuvable', 404);
+      const r = await makeReceipt(o, p.r); if (!r) return bad('introuvable', 404);
+      return new Response(Buffer.from(r.pdf, 'base64'), { headers: { 'content-type': 'application/pdf', 'content-disposition': `inline; filename="recu-${r.opts.number}.pdf"`, 'cache-control': 'private, no-store' } });
     }
     if (m === 'POST' && a === 'pay') {
       const d = await req.json().catch(() => ({}));
@@ -193,6 +230,43 @@ export default async (req) => {
         await q('update admin_users set password_hash=$2 where id=$1', [u.id, hashPassword(String(body.next))]);
         await log(who, 'compte admin', 'admin', u.email, 'Mot de passe modifié');
         return J({ ok: true });
+      }
+      if (b === 'team') {
+        if (m === 'GET' && !c) return J({ users: await q('select id,email,created_at from admin_users order by created_at'), me: ME, env: envAdmin() });
+        if (m === 'POST' && !c) {
+          const email = S(body.email, 200).toLowerCase(), pw = String(body.password ?? '');
+          if (!okMail(email)) return bad('Adresse e-mail invalide.');
+          if (pw.length < 10) return bad('Le mot de passe doit contenir au moins 10 caractères.');
+          const r = await q('insert into admin_users(email,password_hash) values($1,$2) on conflict (email) do nothing returning id', [email, hashPassword(pw)]);
+          if (!r.length) return bad('Cet e-mail a déjà un compte.', 409);
+          await log(who, 'compte admin', 'admin', email, `Compte administrateur créé pour ${email}`);
+          return J({ ok: true });
+        }
+        if (m === 'POST' && UUID.test(c || '') && d === 'password') {
+          const pw = String(body.password ?? ''); if (pw.length < 10) return bad('Le mot de passe doit contenir au moins 10 caractères.');
+          const [u] = await q('update admin_users set password_hash=$2 where id=$1 returning email', [c, hashPassword(pw)]); if (!u) return bad('introuvable', 404);
+          await log(who, 'compte admin', 'admin', u.email, `Mot de passe réinitialisé pour ${u.email}`);
+          return J({ ok: true });
+        }
+        if (m === 'DELETE' && UUID.test(c || '')) {
+          const [u] = await q('select * from admin_users where id=$1', [c]); if (!u) return bad('introuvable', 404);
+          if (u.email.toLowerCase() === ME.toLowerCase()) return bad('Vous ne pouvez pas supprimer votre propre compte.');
+          const [{ n }] = await q('select count(*)::int n from admin_users'); if (n <= 1 && !envAdmin()) return bad('Impossible de supprimer le dernier administrateur.');
+          await q('delete from admin_users where id=$1', [c]);
+          await log(who, 'compte admin', 'admin', u.email, `Compte administrateur supprimé : ${u.email}`);
+          return J({ ok: true });
+        }
+      }
+      if (m === 'POST' && b === 'receipt-link') {
+        const [o] = await q('select * from orders where id=$1', [UUID.test(body.id || '') ? body.id : '00000000-0000-0000-0000-000000000000']);
+        if (!o || o.total == null) return bad('Renseignez d’abord le total de la commande.');
+        const phone = waNumber(o.customer_phone); if (!phone) return bad('Cette commande n’a pas de numéro de téléphone.');
+        let ref = null, now = 0, num = o.code;
+        if (body.ref) { const [p] = await q('select * from payments where ref=$1 and order_id=$2 and not voided', [S(body.ref, 80), o.id]); if (!p) return bad('Paiement introuvable.', 404); ref = p.ref; now = Number(p.amount); num = p.receipt_no; }
+        const link = origin + (await rcptLink(o.id, ref)); const rest = Math.max(0, Number(o.total) - Number(o.paid));
+        const message = `Bonjour ${o.customer_name}, voici votre ${ref ? 'reçu' : 'récapitulatif'} Creaflow ${num} (commande ${o.code})${now ? ' : paiement de ' + fm(now) + ' reçu' : ''}. Total ${fm(o.total)}, payé ${fm(o.paid)}${rest ? ', reste ' + fm(rest) : ', commande soldée'}.\nVotre reçu PDF : ${link}\nMerci de votre confiance ! Creaflow`;
+        await log(who, 'reçu', 'order', o.id, `Reçu ${num} préparé pour envoi par WhatsApp`);
+        return J({ url: `https://wa.me/${phone}?text=${encodeURIComponent(message)}`, link, message, phone });
       }
       // ----- commandes -----
       if (m === 'GET' && b === 'orders' && !c) return J((await q('select * from orders order by created_at desc limit 1000')).map(fix));
@@ -335,8 +409,36 @@ export default async (req) => {
         if (file.size > MAX) return bad('Image trop lourde (4 Mo maximum).', 413);
         const key = `${Date.now()}-${file.name.replace(/[^\w.\-]/g, '_').slice(-60)}`;
         await getStore('gallery').set(key, await file.arrayBuffer(), { metadata: { type: file.type } });
+        await addCat(S(fd.get('category'), 60));
         const [r] = await q('insert into gallery(title,category,path) values($1,$2,$3) returning id,title,category,path', [S(fd.get('title'), 120), S(fd.get('category'), 60), key]);
         return J(r);
+      }
+      if (b === 'gallery-categories') {
+        if (m === 'GET' && !c) return J(await q('select c.id, c.name, c.sort, count(g.id)::int n from gallery_categories c left join gallery g on g.category=c.name group by c.id order by c.sort, c.name'));
+        if (m === 'POST' && !c) {
+          const name = S(body.name, 60); if (!name) return bad('Indiquez le nom de la catégorie.');
+          const r = await q('insert into gallery_categories(name,sort) select $1, coalesce(max(sort),0)+1 from gallery_categories on conflict (name) do nothing returning id,name', [name]);
+          if (!r.length) return bad('Cette catégorie existe déjà.', 409);
+          await log(who, 'galerie', 'gallery', r[0].id, `Catégorie créée : ${name}`); return J({ ...r[0], n: 0 });
+        }
+        if (m === 'PATCH' && UUID.test(c || '')) {
+          const name = S(body.name, 60); if (!name) return bad('Indiquez le nom de la catégorie.');
+          const [old] = await q('select * from gallery_categories where id=$1', [c]); if (!old) return bad('introuvable', 404);
+          if (old.name === name) return J(old);
+          try { await q('update gallery_categories set name=$2 where id=$1', [c, name]); } catch (e) { if (isDup(e)) return bad('Cette catégorie existe déjà.', 409); throw e; }
+          await q('update gallery set category=$2 where category=$1', [old.name, name]);
+          await log(who, 'galerie', 'gallery', c, `Catégorie renommée : ${old.name} → ${name}`); return J({ id: c, name });
+        }
+        if (m === 'DELETE' && UUID.test(c || '')) {
+          const [r] = await q('select c.name, count(g.id)::int n from gallery_categories c left join gallery g on g.category=c.name where c.id=$1 group by c.id', [c]); if (!r) return bad('introuvable', 404);
+          if (r.n > 0) return bad(`Cette catégorie contient ${r.n} photo(s) : déplacez-les d’abord vers une autre catégorie.`, 409);
+          await q('delete from gallery_categories where id=$1', [c]); await log(who, 'galerie', 'gallery', c, `Catégorie supprimée : ${r.name}`); return J({ ok: true });
+        }
+      }
+      if (m === 'PATCH' && b === 'gallery' && UUID.test(c || '')) {
+        const cat = 'category' in body ? S(body.category, 60) : null; await addCat(cat);
+        const [r] = await q('update gallery set title=coalesce($2,title), category=coalesce($3,category) where id=$1 returning id,title,category,path', [c, 'title' in body ? S(body.title, 120) : null, cat]);
+        return r ? J(r) : bad('introuvable', 404);
       }
       if (m === 'DELETE' && b === 'gallery' && UUID.test(c || '')) {
         const [r] = await q('delete from gallery where id=$1 returning path', [c]);

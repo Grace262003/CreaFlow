@@ -28,7 +28,7 @@ button.chip,a.chip{border:0;cursor:pointer;font:inherit;font-weight:600;text-dec
 .st{display:inline-block;padding:.15rem .7rem;border-radius:99px;font-size:.82rem;font-weight:700;background:#eef2fa;color:var(--navy);white-space:nowrap}
 .st[data-s='reçue']{background:#fff4e5;color:#b45f06}.st[data-s='en cours'],.st[data-s='en production']{background:#e6f0ff;color:#1b5fd1}.st[data-s='prête']{background:#e5f7ee;color:#0f8a4b}.st[data-s='livrée']{background:#e8e8ee;color:#444}.st[data-s='annulée']{background:#fde8ec;color:var(--red)}
 .ov{position:fixed;inset:0;background:#0b1b3a88;z-index:80;animation:fade .2s}
-.dr{position:fixed;top:0;right:0;bottom:0;width:min(660px,100%);background:#fff;z-index:90;overflow:auto;padding:1.4rem;box-shadow:-20px 0 50px #0b1b3a33;animation:slide .3s cubic-bezier(.2,.8,.2,1)}
+.dr{position:fixed;top:0;right:0;bottom:0;width:min(660px,100%);background:#fff;z-index:90;overflow:auto;padding:0;box-shadow:-20px 0 50px #0b1b3a33;animation:slide .3s cubic-bezier(.2,.8,.2,1)}
 .modal{position:fixed;z-index:90;left:50%;top:50%;transform:translate(-50%,-50%);width:min(720px,94%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:1.5rem}
 .late{color:var(--red);font-weight:700}.scroll{overflow-x:auto}.row{cursor:pointer}.row:hover{background:#f7f9fd}
 .two{display:grid;gap:.8rem;grid-template-columns:1fr 1fr}@media(max-width:600px){.two{grid-template-columns:1fr}}
@@ -36,3 +36,8 @@ button.chip,a.chip{border:0;cursor:pointer;font:inherit;font-weight:600;text-dec
 .bar-s{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:1rem 0}.bar-s input,.bar-s select{width:auto;min-width:160px}
 @keyframes fade{from{opacity:0}}@keyframes slide{from{transform:translateX(40px);opacity:0}}
 @media print{app-bg-icons,header,footer,.wa,.prog,.noprint{display:none!important}body{background:#fff}.card,.kpi{box-shadow:none}}
+
+/* Tiroir et fenêtres de l'admin : passent au-dessus de l'en-tête du site (qui masquait le haut du tiroir) */
+body.modal-open{overflow:hidden}body.modal-open main{z-index:200}
+.drh{position:sticky;top:0;z-index:5;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:1rem 1.4rem;border-bottom:1px solid var(--line)}.drb{padding:1.2rem 1.4rem 2.5rem}
+button.chip.wa{background:#e5f7ee;color:#0f8a4b}

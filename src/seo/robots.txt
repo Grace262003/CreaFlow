@@ -2,7 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /suivi
+Disallow: /mes-commandes
 Disallow: /paiement/
 Disallow: /api/
 
-Sitemap: https://www.creaflow.bj/sitemap.xml
+Sitemap: https://creaflows.netlify.app/sitemap.xml
