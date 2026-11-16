@@ -68,8 +68,12 @@ Le formulaire de l'étape 2 change selon le service. Les questions se modifient 
 ## Plusieurs administrateurs
 Admin > **Mon compte et équipe** : ajoutez une personne avec son e-mail et un mot de passe provisoire, réinitialisez un mot de passe oublié, supprimez un compte (l'accès est coupé immédiatement). Chaque action du journal porte l'e-mail de son auteur. Tous les comptes ont les mêmes droits.
 
-## Reçu par WhatsApp
-Dans le détail d'une commande, le bouton **WhatsApp** (à côté de chaque paiement, ou « Récapitulatif par WhatsApp ») ouvre WhatsApp avec le message prêt, qui contient un lien vers le reçu PDF. Il suffit d'appuyer sur Envoyer. Le lien est personnel (impossible à deviner) et valable 180 jours. Le numéro est converti au format international (Bénin : 229 + 10 chiffres).
+## Reçu par WhatsApp (PDF joint, sans lien)
+Dans le détail d'une commande, le bouton **WhatsApp** (à côté de chaque paiement, ou « Récapitulatif par WhatsApp ») envoie le **fichier PDF** avec un court message, sans aucun lien :
+- **Sur téléphone** : la feuille de partage s'ouvre avec le PDF déjà joint. Choisissez WhatsApp, puis le client (son nom et son numéro sont rappelés à l'écran).
+- **Sur ordinateur** : le PDF est téléchargé et la conversation WhatsApp du client s'ouvre avec le message prêt ; il suffit de glisser le fichier (ou d'utiliser le trombone).
+Chaque envoi est inscrit dans le journal. WhatsApp n'autorise pas l'envoi automatique d'un fichier sans validation humaine, sauf avec l'API WhatsApp Business de Meta (compte entreprise vérifié, messages modèles, facturation à la conversation).
+Le client peut aussi télécharger son reçu lui-même depuis la page **Mes commandes** de son téléphone.
 
 ## Mes commandes (côté client)
 Chaque commande passée est retenue sur l'appareil du client et apparaît dans **Mes commandes** (menu du site) avec son avancement, les montants, le bouton « Payer le reste en ligne » et le téléchargement du reçu PDF. Le client peut aussi retrouver une commande avec son numéro et son téléphone. Rien n'est stocké ailleurs que sur son appareil.

@@ -257,16 +257,19 @@ export default async (req) => {
           return J({ ok: true });
         }
       }
-      if (m === 'POST' && b === 'receipt-link') {
+      // Reçu prêt à envoyer par WhatsApp : PDF + message court SANS lien (les clients se méfient des liens). Ne journalise rien : voir receipt-log.
+      if (m === 'POST' && b === 'receipt-pack') {
         const [o] = await q('select * from orders where id=$1', [UUID.test(body.id || '') ? body.id : '00000000-0000-0000-0000-000000000000']);
         if (!o || o.total == null) return bad('Renseignez d’abord le total de la commande.');
-        const phone = waNumber(o.customer_phone); if (!phone) return bad('Cette commande n’a pas de numéro de téléphone.');
-        let ref = null, now = 0, num = o.code;
-        if (body.ref) { const [p] = await q('select * from payments where ref=$1 and order_id=$2 and not voided', [S(body.ref, 80), o.id]); if (!p) return bad('Paiement introuvable.', 404); ref = p.ref; now = Number(p.amount); num = p.receipt_no; }
-        const link = origin + (await rcptLink(o.id, ref)); const rest = Math.max(0, Number(o.total) - Number(o.paid));
-        const message = `Bonjour ${o.customer_name}, voici votre ${ref ? 'reçu' : 'récapitulatif'} Creaflow ${num} (commande ${o.code})${now ? ' : paiement de ' + fm(now) + ' reçu' : ''}. Total ${fm(o.total)}, payé ${fm(o.paid)}${rest ? ', reste ' + fm(rest) : ', commande soldée'}.\nVotre reçu PDF : ${link}\nMerci de votre confiance ! Creaflow`;
-        await log(who, 'reçu', 'order', o.id, `Reçu ${num} préparé pour envoi par WhatsApp`);
-        return J({ url: `https://wa.me/${phone}?text=${encodeURIComponent(message)}`, link, message, phone });
+        const ref = body.ref ? S(body.ref, 80) : null; const r = await makeReceipt(o, ref); if (!r) return bad('Paiement introuvable.', 404);
+        const phone = waNumber(o.customer_phone), rest = Math.max(0, Number(o.total) - Number(o.paid)), now = r.opts.amountNow || 0;
+        const message = `Bonjour ${o.customer_name}, voici votre ${ref ? 'reçu' : 'récapitulatif'} Creaflow ${r.opts.number} (commande ${o.code}) : ${now ? 'paiement de ' + fm(now) + ' reçu. ' : ''}Total ${fm(o.total)}, payé ${fm(o.paid)}${rest ? ', reste ' + fm(rest) : ', commande soldée'}. Le PDF est en pièce jointe. Merci de votre confiance ! Creaflow`;
+        return J({ pdf: r.pdf, number: r.opts.number, filename: `recu-${r.opts.number}.pdf`, name: o.customer_name, phone, message, wa: phone ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : '' });
+      }
+      if (m === 'POST' && b === 'receipt-log') {
+        const [o] = await q('select id,code from orders where id=$1', [UUID.test(body.id || '') ? body.id : '00000000-0000-0000-0000-000000000000']); if (!o) return bad('introuvable', 404);
+        await log(who, 'reçu', 'order', o.id, `Reçu ${S(body.number, 40) || o.code} envoyé par WhatsApp (${['partage du PDF', 'PDF téléchargé et conversation ouverte'].includes(body.how) ? body.how : 'PDF joint'})`);
+        return J({ ok: true });
       }
       // ----- commandes -----
       if (m === 'GET' && b === 'orders' && !c) return J((await q('select * from orders order by created_at desc limit 1000')).map(fix));

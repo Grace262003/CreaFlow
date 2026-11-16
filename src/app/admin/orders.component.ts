@@ -49,6 +49,7 @@ import { METHODS, SOURCES, dd, downloadPdf, dt } from './util';
       <p><button class="btn" (click)="addPay()">Enregistrer le paiement</button></p></div> }
     @else if (sel.order.total == null) {<p><small>Fixez le total ci-dessus pour pouvoir enregistrer des paiements.</small></p>}
     <p style="margin-top:1rem"><button class="btn ghost" (click)="rcpt(null, false)">Récapitulatif PDF</button> <button class="btn ghost" (click)="rcpt(null, true)">Récapitulatif par e-mail</button> <button class="btn" style="background:#1fa855;box-shadow:none" (click)="waSend(null)">Récapitulatif par WhatsApp</button></p>
+    <p><small>WhatsApp : le PDF est joint directement, sans lien. Sur téléphone, choisissez WhatsApp puis « {{sel.order.customer_name}} ». Sur ordinateur, le PDF est téléchargé et la conversation du client s’ouvre : glissez le fichier dedans.</small></p>
     <h3 style="margin-top:1.4rem">Historique</h3>
     @for (e of sel.events; track $index) {<p style="margin:.3rem 0"><small>{{dt(e.at)}} · {{e.actor}}</small><br><b>{{e.action}}</b> : {{e.detail}}</p>}
   </div></aside> }
@@ -76,12 +77,30 @@ export class OrdersComponent implements OnInit, OnDestroy {
   private sync() { if (typeof document !== 'undefined') document.body.classList.toggle('modal-open', !!(this.sel || this.nw)); }
   close() { this.sel = null; this.sync(); }
   closeNew() { this.nw = null; this.sync(); }
+  /** Reçus préparés à l'avance (PDF + message) : l'envoi WhatsApp se fait alors dans le même geste que le clic, ce que les navigateurs mobiles exigent. */
+  packs: Record<string, any> = {};
+  private async prefetch(d: any) {
+    if (d.order.total == null) return; const id = d.order.id;
+    const refs: (string | null)[] = [null, ...d.payments.filter((p: any) => !p.voided).map((p: any) => p.ref)];
+    for (const ref of refs) { const r = await this.api.a('POST', 'receipt-pack', { id, ref }); if (this.sel?.order.id !== id) return; if (r.ok) this.packs[ref ?? 'recap'] = r.data; }
+  }
+  private logSend(pack: any, how: string) { return this.api.a('POST', 'receipt-log', { id: this.sel.order.id, number: pack.number, how }); }
   async waSend(ref: string | null) {
-    const w = window.open('', '_blank');
-    const r = await this.api.a('POST', 'receipt-link', { id: this.sel.order.id, ref });
-    if (!r.ok || !r.data?.url) { w?.close(); this.toast.show(r.data?.error ?? 'Lien WhatsApp impossible.'); return; }
-    if (w) w.location.href = r.data.url; else window.open(r.data.url, '_blank');
-    this.toast.show('WhatsApp ouvert : vérifiez le message puis envoyez-le.'); await this.open(this.sel.order);
+    const key = ref ?? 'recap'; let pack = this.packs[key];
+    if (!pack) { const r = await this.api.a('POST', 'receipt-pack', { id: this.sel.order.id, ref }); if (!r.ok) { this.toast.show(r.data?.error ?? 'Reçu impossible.'); return; } pack = this.packs[key] = r.data; }
+    const file = new File([Uint8Array.from(atob(pack.pdf), c => c.charCodeAt(0))], pack.filename, { type: 'application/pdf' });
+    const nav: any = navigator;
+    if (/android|iphone|ipad|ipod/i.test(nav.userAgent) && nav.canShare?.({ files: [file] })) {
+      try {
+        await nav.share({ files: [file], title: `Reçu ${pack.number}`, text: pack.message });
+        await this.logSend(pack, 'partage du PDF'); this.toast.show(`Choisissez WhatsApp, puis « ${pack.name} » (${this.sel.order.customer_phone}).`); await this.open(this.sel.order); return;
+      } catch (e: any) { if (e?.name === 'AbortError') return; }
+    }
+    // ordinateur (ou partage indisponible) : PDF téléchargé + conversation du client ouverte avec le message prêt
+    downloadPdf(pack.pdf, pack.filename);
+    if (pack.wa) window.open(pack.wa, '_blank'); else this.toast.show('Cette commande n’a pas de numéro de téléphone : le PDF est téléchargé.');
+    await this.logSend(pack, 'PDF téléchargé et conversation ouverte');
+    this.toast.show('PDF téléchargé. Dans la conversation WhatsApp ouverte, joignez-le (trombone, ou glissez le fichier).'); await this.open(this.sel.order);
   }
   async ngOnInit() { await this.load(); this.cat = await this.api.catalog(); if (this.openId) this.open({ id: this.openId }); }
   async load() { const r = await this.api.a('GET', 'orders'); if (r.ok) this.rows = r.data; }
@@ -94,7 +113,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   }
   async open(o: any) { const r = await this.api.a('GET', 'orders/' + o.id); if (!r.ok) { this.toast.show('Commande introuvable.'); return; } this.setSel(r.data); }
   setSel(d: any) {
-    this.sel = d; this.sync(); const o = d.order;
+    this.sel = d; this.sync(); this.packs = {}; this.prefetch(d); const o = d.order;
     this.ed = { customer_name: o.customer_name, customer_phone: o.customer_phone, customer_email: o.customer_email ?? '', service: o.service, details: o.details ?? '', notes: o.notes ?? '', quantity: o.quantity, total: o.total, delivery: o.delivery, due_date: o.due_date ? String(o.due_date).slice(0, 10) : '' };
     this.pay = { amount: this.dueOf(o) || null, method: 'espèces', note: '', paid_at: '' };
     const i = this.rows.findIndex(x => x.id === o.id); if (i >= 0) this.rows[i] = o; else this.rows.unshift(o);
