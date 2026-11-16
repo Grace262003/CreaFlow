@@ -76,3 +76,10 @@ Chaque commande passée est retenue sur l'appareil du client et apparaît dans *
 
 ## Galerie de réalisations et catégories
 Admin > Contenu du site > **Galerie** : choisissez une catégorie existante ou « ＋ Nouvelle catégorie… », sélectionnez une ou plusieurs photos et cliquez sur Publier. Les photos sont réduites automatiquement (1600 px), ce qui accepte aussi les grosses photos de téléphone. La carte « Catégories » permet de créer, renommer et supprimer (si elle est vide) ; chaque photo peut être renommée ou déplacée vers une autre catégorie. Sur le site, la page Réalisations affiche les catégories en filtres avec leur nombre de photos ; toutes les cartes ont la même taille.
+
+## Installer le site comme application (Android, iPhone, PC)
+Le site est une application web installable : manifeste (`src/seo/manifest.webmanifest`, icônes 192/512 et icône « maskable » pour Android), service worker (`src/seo/sw.js`) et page hors connexion (`src/seo/offline.html`).
+- **Android (Chrome)** : l'invite d'installation apparaît d'elle-même, et le menu du site propose « Installer l'application ». Sinon : menu ⋮ de Chrome > « Installer l'application ». Dans WhatsApp, Facebook ou Instagram, ouvrez d'abord le site dans Chrome.
+- **iPhone (Safari)** : Partager > « Sur l'écran d'accueil ».
+- **PC (Chrome, Edge)** : icône d'installation dans la barre d'adresse.
+L'installation exige **HTTPS** : testez sur le site déployé sur Netlify, pas sur une adresse locale en http. Le service worker n'est pas activé avec `ng serve` (port 4200) pour ne pas gêner le développement.

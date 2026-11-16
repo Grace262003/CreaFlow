@@ -20,7 +20,7 @@ import { seo } from '../core/seo';
       <a routerLink="/services" class="btn ghost" style="margin-left:.6rem">Découvrir les services</a>
     </div>
     <div class="mock" aria-hidden="true">
-      <div class="win"><div class="dots"><i></i><i></i><i></i><span>creaflow.bj/commander</span></div>
+      <div class="win"><div class="dots"><i></i><i></i><i></i><span>creaflow/commander</span></div>
         <b>Flyers A5 × 500</b><div class="bar"><u style="--w:92%"></u></div><small>Fichiers reçus · mise en page validée</small>
         <div class="bar"><u style="--w:64%;animation-delay:.4s"></u></div><small>Impression en cours</small></div>
       <div class="fl f1"><span class="ok">✓</span> Paiement Mobile Money reçu</div>
@@ -128,7 +128,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     { i: 'users', t: 'Particuliers et étudiants', d: 'Documents, CV, démarches et photos : on s’occupe du papier pour que vous gardiez du temps.', items: ['CV', 'Impression', 'Reliure', 'Photo d’identité', 'Démarches'] },
     { i: 'building', t: 'Entreprises et commerces', d: 'Une image soignée : logo, cartes de visite, flyers, bâches et tenues de vos équipes.', items: ['Logo', 'Cartes de visite', 'Flyers', 'Bâches', 'Tee-shirts'] },
     { i: 'heart', t: 'Églises, associations et événements', d: 'Tee-shirts, banderoles, badges, faire-part et cartes d’invitation pour vos grands rendez-vous.', items: ['Banderoles', 'Badges', 'Faire-part', 'Invitations', 'Casquettes'] }];
-  steps = [{ i: 'pointer', t: 'Commande', d: 'Choisissez le service : le formulaire s’adapte et vous envoyez vos fichiers.' }, { i: 'pencil', t: 'Conception', d: 'Mise en page et création si besoin, validées avec vous.' }, { i: 'printer', t: 'Impression', d: 'Production avec suivi de l’avancement en ligne.' }, { i: 'truck', t: 'Livraison', d: 'Retrait à cabinet ou livraison, reçu PDF à l’appui.' }];
+  steps = [{ i: 'pointer', t: 'Commande', d: 'Choisissez le service : le formulaire s’adapte et vous envoyez vos fichiers.' }, { i: 'pencil', t: 'Conception', d: 'Mise en page et création si besoin, validées avec vous.' }, { i: 'printer', t: 'Impression', d: 'Production avec suivi de l’avancement en ligne.' }, { i: 'truck', t: 'Livraison', d: 'Retrait au cabinet ou livraison, reçu PDF à l’appui.' }];
   why = [{ i: 'layers', t: 'Tout sous le même toit', d: 'Impression, démarches, graphisme et sérigraphie : un seul interlocuteur pour tout.' }, { i: 'pointer', t: 'Commande sur mesure', d: 'Chaque service a son propre formulaire : vous ne répondez qu’aux questions utiles.' },
     { i: 'card', t: 'Paiement simple', d: 'Réglez par Mobile Money en ligne, ou à la remise de votre commande.' }, { i: 'search', t: 'Suivi de A à Z', d: 'Avec votre numéro de commande, vous voyez l’avancement à tout moment.' },
     { i: 'file', t: 'Reçus clairs', d: 'Chaque paiement donne un reçu PDF numéroté, envoyé par e-mail.' }, { i: 'phone', t: 'Joignable facilement', d: 'WhatsApp, téléphone ou e-mail : nous répondons à vos questions.' }];

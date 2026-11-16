@@ -28,5 +28,15 @@
 [dev]
   command = "npx ng serve --port 4200"
   targetPort = 4200
-  port = 4200
+  port = 8888
   autoLaunch = true
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "no-cache"
