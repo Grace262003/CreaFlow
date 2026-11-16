@@ -15,9 +15,13 @@ type Tab = 'dash' | 'orders' | 'compta' | 'rapports' | 'journal' | 'contenu' | '
   selector: 'app-admin', standalone: true, imports: [FormsModule, DashboardComponent, OrdersComponent, AccountingComponent, ReportsComponent, JournalComponent, ContentComponent, AccountComponent],
   template: `<section><div class="wrap">
   @if (!ok) {
-    @if (apiDown) { <div class="card" style="max-width:560px"><h1 style="font-size:1.8rem">Serveur injoignable</h1><p>L’espace admin a besoin du serveur du site (API et base de données), qui n’existe pas avec « ng serve ». En local, lancez <b>npx netlify-cli dev</b> puis ouvrez <b>http://localhost:8888/admin</b> (voir le README). Sinon, ouvrez le site déployé sur Netlify.</p></div> }
+    @if (apiDown) { 
+      <div class="card" style="max-width:560px">
+        <h1 style="font-size:1.8rem">Serveur injoignable</h1>
+        <p>L’espace admin a besoin du  site déployé.</p>
+      </div> }
     @else if (st?.canSetup) { <form (ngSubmit)="doSetup()" class="card" style="max-width:460px" novalidate><h1 style="font-size:2rem">Créer le compte administrateur</h1>
-      <p>Première visite : choisissez votre e-mail et votre mot de passe. Le code d’installation se lit dans Neon (voir le README).</p>
+      <p>Première visite : choisissez votre e-mail et votre mot de passe. Le code d’installation se lit dans Neon</p>
       <label for="c">Code d’installation</label><input id="c" name="c" [(ngModel)]="code" autocomplete="off">
       <label for="e">Votre e-mail</label><input id="e" name="e" [(ngModel)]="email" type="email" autocomplete="username">
       <label for="p">Mot de passe (10 caractères minimum)</label><input id="p" name="p" [(ngModel)]="pw" type="password" autocomplete="new-password">
